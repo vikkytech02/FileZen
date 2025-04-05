@@ -1,94 +1,18 @@
-🗂️ File Organizer (with Undo & GUI)
+# 🗂️ FileZen
 
-A simple Python application that helps you organize files into categorized folders based on file extensions.
-It features a user-friendly GUI and supports undoing the last organization operation with a single click.
-🚀 Features
-
-    Organize files into folders like Images, Documents, Videos, etc.
-
-    GUI with buttons for:
-
-        Organizing files
-
-        Undoing the last operation
-
-    Automatically creates folders and moves files based on type
-
-    Safe Undo: Restores files to their original locations
-
-    Configuration file for custom extension mappings
-
-    Clean exit when window is closed
-
-🛠️ Installation & Usage
-1. Clone the Repository
-
-git clone https://github.com/yourusername/file-organizer.git
-cd file-organizer
-
-2. Run the Application
-
-python file_organizer.py
-
-✅ Note: Python and tkinter must be installed (included by default in most Python distributions).
-📁 File Overview
-File	Purpose
-file_organizer.py	Main script with GUI
-file_tidy_config.json	(Auto-generated) File type to extension mapping
-file_tidy_log.json	(Auto-generated) Log of moved files
-file_tidy_undo.json	(Auto-generated) Stores info for undoing
-🔄 Undo Feature
-
-If you've organized files and want to revert the changes,
-just click the "Undo Last Operation" button in the app.
-
-It will restore files to their original locations as long as they haven't been modified or deleted.
-⚙️ Custom File Type Mappings
-
-On first run, a file_tidy_config.json file will be created.
-You can customize it to define which file extensions go into which folders.
-
-Example:
-
-{
-  "IMAGES": [".jpg", ".png"],
-  "DOCUMENTS": [".pdf", ".docx", ".txt"]
-}
-
-Add or remove categories and extensions however you like.
-💡 Future Ideas
-
-    Add a progress bar
-
-    Dark mode for the GUI
-
-    Exclude specific folders or file types
-
-    Drag-and-drop folder selection
-
-📄 License
-
-This project is licensed under the MIT License.
-Feel free to use, modify, and share!
-🙌 Author
-
-Made with ❤️ by [Your Name]# 🗂️ File Organizer (with Undo & GUI)
-
-A simple Python application that helps you organize files into categorized folders based on file extensions.  
-It features a user-friendly GUI and supports undoing the last organization operation with a single click.
+**FileZen** is a lightweight and user-friendly Python app that helps you keep your folders clean and organized.  
+It automatically sorts files into categorized folders based on their extensions — and you can undo it anytime with just one click.
 
 ---
 
 ## 🚀 Features
 
-- Organize files into folders like Images, Documents, Videos, etc.
-- GUI with buttons for:
-  - Organizing files
-  - Undoing the last operation
-- Automatically creates folders and moves files based on type
-- Safe Undo: Restores files to their original locations
-- Configuration file for custom extension mappings
-- Clean exit when window is closed
+- 📁 Organize files into folders (Images, Documents, Videos, etc.)
+- 🖱️ Simple GUI interface — no command line needed
+- 🔄 Undo the last file organization operation safely
+- 🛠️ Configurable extension-to-folder mapping
+- ✅ Clean exit when the window is closed
+- 💡 Fast and multithreaded file moving
 
 ---
 
@@ -97,51 +21,48 @@ It features a user-friendly GUI and supports undoing the last organization opera
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/file-organizer.git
-cd file-organizer
+git clone https://github.com/yourusername/FileZen.git
+cd FileZen
 ```
 
-### 2. Run the Application
+### 2. Run the App
 
 ```bash
 python file_organizer.py
 ```
 
-✅ **Note:** Python and `tkinter` must be installed (included by default in most Python distributions).
+✅ **Note:** Requires Python 3.6+ with `tkinter` (usually comes built-in).
 
 ---
 
-## 📁 File Overview
+## 🖥️ How It Works
 
-| File                   | Purpose                                         |
-|------------------------|-------------------------------------------------|
-| `file_organizer.py`    | Main script with GUI                            |
-| `file_tidy_config.json`| (Auto-generated) File type to extension mapping |
-| `file_tidy_log.json`   | (Auto-generated) Log of moved files             |
-| `file_tidy_undo.json`  | (Auto-generated) Stores info for undoing        |
+- When you click **"Organize Files"**, it asks you to select a folder.
+- It automatically moves files into new subfolders like:
+  - `IMAGES`, `DOCUMENTS`, `VIDEOS`, `AUDIO`, etc.
+- File types are mapped via the config (`file_tidy_config.json`)
+- You can undo everything using the **"Undo Last Operation"** button.
 
 ---
 
 ## 🔄 Undo Feature
 
-If you've organized files and want to revert the changes,  
-just click the **"Undo Last Operation"** button in the app.  
-
-It will restore files to their original locations as long as they haven't been modified or deleted.
+Made a mistake?  
+Click the **Undo Last Operation** button and all files will go back to where they were — as long as they weren’t changed or deleted.
 
 ---
 
-## ⚙️ Custom File Type Mappings
+## ⚙️ Customize File Categories
 
-On first run, a `file_tidy_config.json` file will be created.  
-You can customize it to define which file extensions go into which folders.
+A config file (`file_tidy_config.json`) is auto-created the first time you run FileZen.
 
-Example:
+You can customize file type mappings like this:
 
 ```json
 {
   "IMAGES": [".jpg", ".png"],
-  "DOCUMENTS": [".pdf", ".docx", ".txt"]
+  "DOCUMENTS": [".pdf", ".docx", ".txt"],
+  "VIDEOS": [".mp4", ".avi"]
 }
 ```
 
@@ -149,22 +70,33 @@ Add or remove categories and extensions however you like.
 
 ---
 
-## 💡 Future Ideas
+## 📁 File Structure
 
-- Add a progress bar  
-- Dark mode for the GUI  
-- Exclude specific folders or file types  
-- Drag-and-drop folder selection  
+| File                    | Purpose                                       |
+|-------------------------|-----------------------------------------------|
+| `file_organizer.py`     | Main script (runs the GUI & file logic)       |
+| `file_tidy_config.json` | (Auto-generated) Extension mappings           |
+| `file_tidy_log.json`    | (Auto-generated) Log of moved files           |
+| `file_tidy_undo.json`   | (Auto-generated) Stores undo operation info   |
+
+---
+
+## 💡 Future Enhancements
+
+- ⏳ Progress bar while organizing
+- 🌙 Dark mode
+- 🗂️ Exclude specific folders
+- 📦 Drag-and-drop support
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.  
+This project is licensed under the [MIT License](LICENSE).  
 Feel free to use, modify, and share!
 
 ---
 
 ## 🙌 Author
 
-Made with ❤️ by VikkyTech
+Made with ❤️ by VikkyTech  
