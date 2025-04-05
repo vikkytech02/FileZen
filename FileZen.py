@@ -96,10 +96,10 @@ def start_gui():
         sys.exit()
 
     root = Tk()
-    root.title("File Organizer")
+    root.title("FileZen")
     root.geometry("300x150")
 
-    Label(root, text="File Organizer", font=("Arial", 14)).pack(pady=10)
+    Label(root, text="Welcome to FileZen", font=("Arial", 14)).pack(pady=10)
     Button(root, text="Organize Files", command=on_organize_click).pack(pady=5)
     Button(root, text="Undo Last Operation", command=on_undo_click).pack(pady=5)
 
