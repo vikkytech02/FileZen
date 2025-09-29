@@ -1,102 +1,116 @@
-# 🗂️ FileZen
+# 📂 FileZen — Intelligent File Organizer
 
-**FileZen** is a lightweight and user-friendly Python app that helps you keep your folders clean and organized.  
-It automatically sorts files into categorized folders based on their extensions — and you can undo it anytime with just one click.
-
----
-
-## 🚀 Features
-
-- 📁 Organize files into folders (Images, Documents, Videos, etc.)
-- 🖱️ Simple GUI interface — no command line needed
-- 🔄 Undo the last file organization operation safely
-- 🛠️ Configurable extension-to-folder mapping
-- ✅ Clean exit when the window is closed
-- 💡 Fast and multithreaded file moving
+FileZen is a **hybrid file organizer** that combines **rule-based sorting** with an **ML-powered classifier** to keep your directories neat and clean.  
+It automatically organizes files into categories (Documents, Images, Audio, Video, etc.) and sends uncertain predictions to a **Review folder**.
 
 ---
 
-## 🛠️ Installation & Usage
+## ✨ Features
 
-### 1. Clone the Repository
+- 🔹 **Rule + ML Hybrid** → uses file extensions & ML predictions  
+- 🔹 **Dry Run Preview** → table view of (filename / target / confidence) before moving files  
+- 🔹 **Confidence Threshold Control** → slider to adjust ML certainty level  
+- 🔹 **Review System** → low-confidence files are sent to a dedicated `Review` folder  
+- 🔹 **Undo Last Operation** → revert last file move with one click  
+- 🔹 **Logs** → all operations saved (`log.json`, `undo.json`, `review_log.json`)  
+- 🔹 **Dark/Light Theme** → toggleable modern UI  
+- 🔹 **Summary Report** → shows how many files were moved vs. sent to review  
+
+---
+
+## 🖥️ GUI Preview
+
+### Light Mode
+![Light Mode Screenshot](assets/light_mode.png)
+
+### Dark Mode
+![Dark Mode Screenshot](assets/dark_mode.png)
+
+---
+
+## ⚙️ Installation
 
 ```bash
-git clone https://github.com/yourusername/FileZen.git
-cd FileZen
+# 1. Clone the repository
+git clone https://github.com/your-username/filezen.git
+cd filezen
+
+# 2. (Optional) Create a virtual environment
+python -m venv filezen
+source filezen/bin/activate   # Linux/Mac
+filezen\Scripts\activate     # Windows
+
+# 3. Install dependencies
+pip install -r requirements.txt
 ```
 
-### 2. Run the App
+> **Note:** `tkinter` usually comes with Python, but if missing, install via your package manager.
+
+---
+
+## 🚀 Usage
+
+Run FileZen with:
 
 ```bash
-python file_organizer.py
+python filezen.py
 ```
 
-✅ **Note:** Requires Python 3.6+ with `tkinter` (usually comes built-in).
+### Modes
+
+- **Dry Run Preview** → See how files will be organized before actually moving them  
+- **Organize Files** → Moves files into category folders  
+- **Undo** → Restores last moved files to their original locations  
 
 ---
 
-## 🖥️ How It Works
+## 📂 Project Structure
 
-- When you click **"Organize Files"**, it asks you to select a folder.
-- It automatically moves files into new subfolders like:
-  - `IMAGES`, `DOCUMENTS`, `VIDEOS`, `AUDIO`, etc.
-- File types are mapped via the config (`file_tidy_config.json`)
-- You can undo everything using the **"Undo Last Operation"** button.
-
----
-
-## 🔄 Undo Feature
-
-Made a mistake?  
-Click the **Undo Last Operation** button and all files will go back to where they were — as long as they weren’t changed or deleted.
-
----
-
-## ⚙️ Customize File Categories
-
-A config file (`file_tidy_config.json`) is auto-created the first time you run FileZen.
-
-You can customize file type mappings like this:
-
-```json
-{
-  "IMAGES": [".jpg", ".png"],
-  "DOCUMENTS": [".pdf", ".docx", ".txt"],
-  "VIDEOS": [".mp4", ".avi"]
-}
+```
+filezen/
+├── filezen.py          # Main application
+├── config.json         # Custom rules (if exists)
+├── log.json            # History of operations
+├── undo.json           # Last operation (for undo)
+├── review_log.json     # Files sent to Review folder
+├── requirements.txt    # Dependencies
+└── assets/             # Screenshots for README
 ```
 
-Add or remove categories and extensions however you like.
+---
+
+## 🧠 ML Model
+
+- The ML classifier is trained on a dataset of file extensions and their categories  
+- Predictions are used when the file extension is unknown  
+- Low-confidence predictions (below threshold) go into the **Review folder**  
 
 ---
 
-## 📁 File Structure
+## 🛠️ Tech Stack
 
-| File                    | Purpose                                       |
-|-------------------------|-----------------------------------------------|
-| `file_organizer.py`     | Main script (runs the GUI & file logic)       |
-| `file_tidy_config.json` | (Auto-generated) Extension mappings           |
-| `file_tidy_log.json`    | (Auto-generated) Log of moved files           |
-| `file_tidy_undo.json`   | (Auto-generated) Stores undo operation info   |
+- **Python 3.10+**  
+- **Tkinter** → GUI  
+- **scikit-learn** → ML model  
+- **joblib** → Model persistence  
+- **pandas** → Data handling  
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**.  
+Feel free to use, modify, and distribute.
 
 ---
 
 ## 💡 Future Enhancements
 
-- ⏳ Progress bar while organizing
-- 🌙 Dark mode
-- 🗂️ Exclude specific folders
-- 📦 Drag-and-drop support
+- [ ] Log Viewer Tab inside GUI  
+- [ ] Drag & Drop support  
+- [ ] More granular ML categories (sub-categories for code, media, etc.)  
+- [ ] Cross-platform installer  
 
 ---
 
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).  
-Feel free to use, modify, and share!
-
----
-
-## 🙌 Author
-
-Made with ❤️ by VikkyTech  
+👨‍💻 Developed with ❤️ by **Vikas Yadav**
