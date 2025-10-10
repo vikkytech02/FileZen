@@ -1,66 +1,60 @@
-# 📂 FileZen — Intelligent File Organizer
+# 🧠 FileZen v2.0 — Smart File Organizer + Duplicate Finder
 
-FileZen is a **hybrid file organizer** that combines **rule-based sorting** with an **ML-powered classifier** to keep your directories neat and clean.  
-It automatically organizes files into categories (Documents, Images, Audio, Video, etc.) and sends uncertain predictions to a **Review folder**.
-
----
-
-## ✨ Features
-
-- 🔹 **Rule + ML Hybrid** → uses file extensions & ML predictions  
-- 🔹 **Dry Run Preview** → table view of (filename / target / confidence) before moving files  
-- 🔹 **Confidence Threshold Control** → slider to adjust ML certainty level  
-- 🔹 **Review System** → low-confidence files are sent to a dedicated `Review` folder  
-- 🔹 **Undo Last Operation** → revert last file move with one click  
-- 🔹 **Logs** → all operations saved (`log.json`, `undo.json`, `review_log.json`)  
-- 🔹 **Dark/Light Theme** → toggleable modern UI  
-- 🔹 **Summary Report** → shows how many files were moved vs. sent to review  
+**FileZen v2.0** is an upgraded hybrid file management suite that combines  
+💡 **AI-based organization** and 🧩 **intelligent duplicate detection** — all wrapped in a clean, modern UI.
 
 ---
 
-## 🖥️ GUI Preview
+## ✨ New in v2.0
 
-### Light Mode
-![Light Mode Screenshot](assets/light_mode.png)
+- 🔍 **Smart Duplicate Finder (Integrated)**  
+  Launch a dedicated duplicate-scanning window directly from FileZen.  
+  - Scans files using **content hashing (SHA-256)**  
+  - Groups duplicates visually  
+  - Lets you **preview images** inside the app  
+  - Choose which file to **keep** — others are safely moved to a `Duplicate_Files` folder  
+  - Fully integrated with FileZen (auto-close + button control)
 
-### Dark Mode
-![Dark Mode Screenshot](assets/dark_mode.png)
+- 🧩 **Multi-Process Integration**  
+  - The “Find Duplicates” button opens a separate PyQt5 window  
+  - FileZen auto-disables the button while it’s running  
+  - When the duplicate window closes → button re-enables automatically  
+  - Closing FileZen also terminates any running duplicate window safely
 
----
+- 📊 **Improved Post-Organization Report**  
+  - After organizing, a popup summary shows:  
+    - Number of files moved  
+    - Files sent to review  
+    - Operation time  
 
-## ⚙️ Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/filezen.git
-cd filezen
-
-# 2. (Optional) Create a virtual environment
-python -m venv filezen
-source filezen/bin/activate   # Linux/Mac
-filezen\Scripts\activate     # Windows
-
-# 3. Install dependencies
-pip install -r requirements.txt
-```
-
-> **Note:** `tkinter` usually comes with Python, but if missing, install via your package manager.
+- 🌗 **Enhanced Dark/Light Theme Toggle**  
+  - Smoother color transitions and persistent state  
 
 ---
 
-## 🚀 Usage
+## ⚙️ Core Features
 
-Run FileZen with:
+### 🔹 Intelligent File Organizer
+Hybrid engine that uses:
+- **Rule-based sorting** (based on file extensions or config rules)
+- **ML-powered predictions** for unknown or mixed files
+- Files below confidence threshold → moved to **Review folder**
 
-```bash
-python filezen.py
-```
+### 🔹 Dry Run Preview
+- Preview every move before committing  
+- Toggle ON/OFF easily from the main window  
 
-### Modes
+### 🔹 Undo Last Operation
+- Revert any file move instantly  
+- Safe recovery using `undo.json`
 
-- **Dry Run Preview** → See how files will be organized before actually moving them  
-- **Organize Files** → Moves files into category folders  
-- **Undo** → Restores last moved files to their original locations  
+### 🔹 Logging System
+- Every organize, undo, and review action is recorded  
+- Logs saved in `log.json` and `review_log.json`
+
+### 🔹 GUI Tools
+- **Tkinter-based main app** for FileZen  
+- **PyQt5-based Duplicate Finder** for smoother duplicate management  
 
 ---
 
@@ -68,48 +62,104 @@ python filezen.py
 
 ```
 filezen/
-├── filezen.py          # Main application
-├── config.json         # Custom rules (if exists)
-├── log.json            # History of operations
-├── undo.json           # Last operation (for undo)
-├── review_log.json     # Files sent to Review folder
-├── requirements.txt    # Dependencies
-└── assets/             # Screenshots for README
+├── filezen.py                  # Main FileZen app (Tkinter)
+├── filezen_duplicate_finder.py # PyQt5 duplicate finder module
+├── filezen_model.pkl           # ML model (joblib)
+├── config.json                 # Optional user rules
+├── log.json                    # Log of operations
+├── undo.json                   # Undo data
+├── review_log.json             # Review tracking
+├── requirements.txt            # Dependencies
+└── assets/                     # Screenshots, icons, etc.
+```
+
+---
+
+## 🖥️ GUI Snapshots
+
+### 🪶 FileZen — Light Mode  
+![Light Mode](assets/light_mode.png)
+
+### 🌑 FileZen — Dark Mode  
+![Dark Mode](assets/dark_mode.png)
+
+### 🧩 Duplicate Finder Window  
+![Duplicate Finder](assets/duplicate_finder.png)
+
+---
+
+## 🚀 Usage
+
+### Run FileZen
+```bash
+python filezen.py
+```
+
+### Open Duplicate Finder
+Either click **Find Duplicates** inside FileZen,  
+or run standalone:
+```bash
+python filezen_duplicate_finder.py
 ```
 
 ---
 
 ## 🧠 ML Model
 
-- The ML classifier is trained on a dataset of file extensions and their categories  
-- Predictions are used when the file extension is unknown  
-- Low-confidence predictions (below threshold) go into the **Review folder**  
+- Trained on categorized file datasets  
+- Uses extension + metadata features for predictions  
+- Adjustable **confidence threshold**  
+- Low-confidence predictions automatically redirected to **Review**
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Python 3.10+**  
-- **Tkinter** → GUI  
-- **scikit-learn** → ML model  
-- **joblib** → Model persistence  
-- **pandas** → Data handling  
+| Component | Technology |
+|------------|-------------|
+| GUI | Tkinter + PyQt5 |
+| ML | scikit-learn, joblib |
+| Data Handling | pandas |
+| File Preview | Pillow (Images only) |
+| Hashing | imagehash, hashlib |
+| Reporting | JSON-based logs |
 
 ---
 
-## 📜 License
+## ⚡ Installation
 
-This project is licensed under the **MIT License**.  
-Feel free to use, modify, and distribute.
+```bash
+# Clone the repo
+git clone https://github.com/your-username/filezen.git
+cd filezen
+
+# Create a virtual environment
+python -m venv filezen
+source filezen/bin/activate   # Linux/Mac
+filezen\Scripts\activate     # Windows
+
+# Install requirements
+pip install -r requirements.txt
+```
+
+> 📝 **Make sure** your `requirements.txt` includes:  
+> `pandas scikit-learn joblib python-docx PyPDF2 Pillow imagehash PyQt5`
 
 ---
 
-## 💡 Future Enhancements
+## 🧾 License
 
-- [ ] Log Viewer Tab inside GUI  
-- [ ] Drag & Drop support  
-- [ ] More granular ML categories (sub-categories for code, media, etc.)  
-- [ ] Cross-platform installer  
+Licensed under the **MIT License** — free to use, modify, and share.
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Log viewer tab inside GUI  
+- [ ] Drag & drop support  
+- [ ] Sub-category classification for media/code types  
+- [ ] Minimized background mode for auto-organization  
+- [ ] Cross-platform installer package  
 
 ---
 
