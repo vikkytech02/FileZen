@@ -1,87 +1,147 @@
+# filezen.py
 import os
+import shutil
 import json
+import joblib
+import subprocess
+import pandas as pd
 from pathlib import Path
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-# ===== Dummy ML Prediction (replace with real model) =====
-def predict_category(file_path):
-    # Example stub: put real ML model inference here
-    name = file_path.name.lower()
-    if name.endswith(".jpg") or name.endswith(".png"):
-        return "Images", 0.92
-    elif name.endswith(".pdf") or name.endswith(".docx"):
-        return "Documents", 0.88
-    else:
-        return None, 0.40
-
-# ===== Config =====
-CONFIG_FILE = "config.json"
-LOG_FILE = "log.json"
-UNDO_FILE = "undo.json"
-REVIEW_LOG = "review_log.json"
-
-config = {
-    "confidence_threshold": 0.75,
-    "review_folder_name": "Review"
-}
-
+# ======== DEFAULT CATEGORIES ========
 DEFAULT_DIRECTORIES = {
-    "Images": [".jpg", ".jpeg", ".png", ".gif"],
-    "Documents": [".pdf", ".docx", ".txt"],
-    "Videos": [".mp4", ".avi", ".mov"],
-    "Music": [".mp3", ".wav"],
+    "HTML": [".html5", ".html", ".htm", ".xhtml"],
+    "IMAGES": [".jpeg", ".jpg", ".png", ".gif", ".bmp", ".svg", ".tiff"],
+    "VIDEOS": [".mp4", ".mov", ".avi", ".flv", ".wmv"],
+    "DOCUMENTS": [".pdf", ".docx", ".doc", ".ppt", ".pptx", ".xls", ".xlsx"],
+    "ARCHIVES": [".zip", ".rar", ".tar", ".gz", ".7z"],
+    "AUDIO": [".mp3", ".wav", ".aac"],
+    "PLAINTEXT": [".txt", ".log", ".csv"],
+    "PYTHON": [".py"],
+    "EXE": [".exe"],
+    "SHELL": [".sh"]
 }
 
+CONFIG_FILE = "file_tidy_config.json"
+LOG_FILE = "file_tidy_log.json"
+UNDO_FILE = "file_tidy_undo.json"
+REVIEW_LOG = "file_tidy_review.json"
+MODEL_FILE = "filezen_model.pkl"
 
-# ===== Helpers =====
-def move_file_safe(src, dst):
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    counter = 1
-    new_dst = dst
-    while new_dst.exists():
-        new_dst = dst.with_stem(f"{dst.stem}_{counter}")
-        counter += 1
-    src.replace(new_dst)
-    return new_dst
+# ======== CONFIG ========
+DEFAULT_CONFIG = {
+    "confidence_threshold": 0.75,
+    "review_folder_name": "REVIEW",
+    "model_file": MODEL_FILE
+}
 
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            cfg = json.load(f)
+        for k, v in DEFAULT_CONFIG.items():
+            cfg.setdefault(k, v)
+        return cfg
+    else:
+        return DEFAULT_CONFIG.copy()
 
-# ===== Core Organize Logic =====
-def organize_files(directory, dry_run=False, confidence_threshold=0.75):
-    file_formats = {ext: category for category, exts in DEFAULT_DIRECTORIES.items() for ext in exts}
+config = load_config()
+
+# ======== LOAD MODEL ========
+ml_model = None
+if os.path.exists(config["model_file"]):
+    try:
+        ml_model = joblib.load(config["model_file"])
+        print("[INFO] Loaded ML model:", config["model_file"])
+    except Exception as e:
+        print("[WARN] Failed to load model:", e)
+else:
+    print("[INFO] No model found. Running rule-based only.")
+
+# ======== UTIL ========
+def _unique_target(target_path: Path) -> Path:
+    if not target_path.exists():
+        return target_path
+    base = target_path.stem
+    suffix = target_path.suffix
+    parent = target_path.parent
+    i = 1
+    while True:
+        candidate = parent / f"{base}_{i}{suffix}"
+        if not candidate.exists():
+            return candidate
+        i += 1
+
+def move_file_safe(src: Path, dest: Path):
+    dest = _unique_target(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dest))
+    return dest
+
+def predict_category(file_path: Path):
+    if ml_model is None:
+        return None, 0.0
+    data = pd.DataFrame([{
+        "filename": file_path.name,
+        "extension": file_path.suffix.lower(),
+        "size": file_path.stat().st_size
+    }])
+    try:
+        proba = ml_model.predict_proba(data)[0]
+        pred = ml_model.predict(data)[0]
+        conf = float(proba.max())
+        return pred, conf
+    except Exception as e:
+        print("[ML ERROR]", e)
+        return None, 0.0
+
+# ======== ORGANIZE FILES ========
+def organize_files(directory, dry_run=False, confidence_threshold=None):
+    if confidence_threshold is None:
+        confidence_threshold = config["confidence_threshold"]
+
+    file_formats = {ext: cat for cat, exts in DEFAULT_DIRECTORIES.items() for ext in exts}
     files_moved = {}
     review_entries = {}
-    summary = {"moved": 0, "review": 0}
+    dry_run_results = []
 
     review_folder = Path(directory) / config["review_folder_name"]
+
+    moved_count = 0
+    skipped_count = 0
+    review_count = 0
 
     for entry in os.scandir(directory):
         if entry.is_dir():
             continue
-
         file_path = Path(entry.path)
         ext = file_path.suffix.lower()
 
+        # Determine category
         if ext in file_formats:
             category = file_formats[ext]
-            reason = "rule"
             conf = 1.0
+            reason = "rule"
         else:
             predicted, conf = predict_category(file_path)
             if predicted is None:
                 category = "Unsorted"
                 reason = "no_model"
-            elif conf >= confidence_threshold:
-                category = predicted
-                reason = "ml_confident"
             else:
-                category = None
-                reason = "ml_low_confidence"
+                if conf >= confidence_threshold:
+                    category = predicted
+                    reason = "ml_confident"
+                else:
+                    category = None
+                    reason = "ml_low_confidence"
 
+        # Review or Move
         if category is None:
             target_dir = review_folder
             new_path = target_dir / file_path.name
+            review_count += 1
             if not dry_run:
                 new_path = move_file_safe(file_path, new_path)
                 review_entries[str(file_path)] = {
@@ -90,83 +150,104 @@ def organize_files(directory, dry_run=False, confidence_threshold=0.75):
                     "confidence": conf,
                     "time": datetime.now().isoformat()
                 }
-                summary["review"] += 1
+            else:
+                dry_run_results.append((file_path.name, str(new_path), f"{conf:.2f}"))
             continue
 
         target_dir = Path(directory) / category
         new_path = target_dir / file_path.name
-        if not dry_run:
+        if dry_run:
+            dry_run_results.append((file_path.name, str(new_path), f"{conf:.2f}"))
+        else:
             moved_to = move_file_safe(file_path, new_path)
             files_moved[str(file_path)] = str(moved_to)
-            summary["moved"] += 1
+            moved_count += 1
 
-    # Save logs
-    if not dry_run and files_moved:
-        op = {"time": datetime.now().isoformat(), "moves": files_moved}
-        if os.path.exists(LOG_FILE):
-            try:
-                data = json.load(open(LOG_FILE))
-            except:
-                data = []
-        else:
+    # Save logs only for real move
+    if not dry_run:
+        if files_moved:
+            op = {"time": datetime.now().isoformat(), "moves": files_moved}
             data = []
-        data.append(op)
-        with open(LOG_FILE, "w") as f:
-            json.dump(data, f, indent=2)
-        with open(UNDO_FILE, "w") as f:
-            json.dump(op, f, indent=2)
+            if os.path.exists(LOG_FILE):
+                try:
+                    data = json.load(open(LOG_FILE))
+                except:
+                    pass
+            data.append(op)
+            with open(LOG_FILE, "w") as f:
+                json.dump(data, f, indent=2)
+            with open(UNDO_FILE, "w") as f:
+                json.dump(op, f, indent=2)
 
-    if not dry_run and review_entries:
-        if os.path.exists(REVIEW_LOG):
-            try:
-                existing = json.load(open(REVIEW_LOG))
-            except:
-                existing = []
-        else:
+        if review_entries:
             existing = []
-        existing.extend([{"original_path": k, **v} for k, v in review_entries.items()])
-        with open(REVIEW_LOG, "w") as f:
-            json.dump(existing, f, indent=2)
+            if os.path.exists(REVIEW_LOG):
+                try:
+                    existing = json.load(open(REVIEW_LOG))
+                except:
+                    pass
+            existing.extend([{"original_path": k, **v} for k, v in review_entries.items()])
+            with open(REVIEW_LOG, "w") as f:
+                json.dump(existing, f, indent=2)
 
-    # Logs for dry run (preview)
-    logs = []
+    summary = {
+        "moved": moved_count,
+        "skipped": skipped_count,
+        "review": review_count
+    }
+
     if dry_run:
-        for file_path in files_moved.keys():
-            logs.append((Path(file_path).name, files_moved[file_path], 1.0))
-        for file_path, v in review_entries.items():
-            logs.append((Path(file_path).name, "Review Folder", v["confidence"]))
+        return dry_run_results, summary
+    else:
+        return None, summary
 
-    return logs if dry_run else summary
-
-
+# ======== UNDO ========
 def undo_last_operation():
     if not os.path.exists(UNDO_FILE):
-        messagebox.showinfo("Undo", "No last operation found.")
+        messagebox.showinfo("Undo", "No undo information found.")
         return
-    with open(UNDO_FILE, "r") as f:
-        last_op = json.load(f)
-    for src, dst in last_op["moves"].items():
-        src_p = Path(src)
-        dst_p = Path(dst)
-        if dst_p.exists():
-            move_file_safe(dst_p, src_p)
-    messagebox.showinfo("Undo", "Last operation reverted.")
+    with open(UNDO_FILE) as f:
+        op = json.load(f)
+    moves = op.get("moves", {})
+    for src, dst in moves.items():
+        if os.path.exists(dst):
+            try:
+                move_file_safe(Path(dst), Path(src))
+            except Exception as e:
+                print("Failed to move back", dst, "->", src, e)
+    os.remove(UNDO_FILE)
+    messagebox.showinfo("Undo", "Undo completed.")
 
-
-# ===== GUI =====
+# ======== GUI ========
 class FileZenApp:
     def __init__(self, root):
         self.root = root
         self.root.title("FileZen — Rule + ML Hybrid")
-        self.root.geometry("650x460")
+        self.root.geometry("600x420")
         self.dark_theme = tk.BooleanVar(value=False)
         self.conf_val = tk.DoubleVar(value=config["confidence_threshold"])
-        self.dry_run_var = tk.BooleanVar(value=False)
+        self.dry_run_enabled = tk.BooleanVar(value=True)
         self.setup_ui()
+    
+    def open_duplicate_finder(self, button):
+        """Open the Duplicate Finder tool and disable the button while it's running."""
+        import subprocess
+        button.config(state="disabled")
+
+        process = subprocess.Popen(["python", "filezen_duplicate_finder.py"])
+
+        def check_process():
+            if process.poll() is None:
+                button.after(1000, check_process)
+            else:
+                button.config(state="normal")
+
+        check_process()
 
     def setup_ui(self):
         self.apply_theme()
 
+        # ===== Title =====
         ttk.Label(self.root, text="FileZen — Hybrid Organizer",
                   font=("Arial", 16, "bold")).pack(pady=(15, 10))
 
@@ -198,9 +279,61 @@ class FileZenApp:
         options_frame = ttk.Frame(self.root)
         options_frame.pack(fill="x", padx=20, pady=(5, 15))
 
-        ttk.Checkbutton(options_frame, text="Dry Run Preview", variable=self.dry_run_var).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Checkbutton(options_frame, text="Dry Run Preview", variable=self.dry_run_enabled,
+                        command=self.on_preview_toggle).grid(row=0, column=0, padx=5, pady=5, sticky="w")
         ttk.Checkbutton(options_frame, text="Dark Theme", variable=self.dark_theme,
                         command=self.apply_theme).grid(row=0, column=1, padx=5, pady=5, sticky="e")
+        find_duplicates_button = ttk.Button(options_frame, text="Find Duplicates",command=lambda: self.open_duplicate_finder(find_duplicates_button))
+        find_duplicates_button.grid(row=0, column=2, padx=10, pady=5)
+
+    def apply_theme(self):
+        style = ttk.Style(self.root)
+        style.theme_use("clam")
+
+        if self.dark_theme.get():
+            self.root.configure(bg="#2e2e2e")
+            # Labels / Frames
+            style.configure("TLabel", background="#2e2e2e", foreground="#ffffff")
+            style.configure("TFrame", background="#2e2e2e")
+            style.configure("TLabelframe", background="#2e2e2e", foreground="#ffffff")
+            style.configure("TLabelframe.Label", background="#2e2e2e", foreground="#ffffff")
+            # Buttons
+            style.configure("TButton", background="#444444", foreground="#ffffff", padding=6, relief="flat")
+            style.map("TButton",
+                      background=[("active", "#666666")],
+                      foreground=[("active", "#ffffff")])
+            # Checkbuttons (✔ fixed hover readability)
+            style.configure("TCheckbutton", background="#2e2e2e", foreground="#ffffff")
+            style.map("TCheckbutton",
+                      background=[("active", "#2e2e2e")],
+                      foreground=[("active", "#ffffff"),
+                                  ("selected", "#ffffff"),
+                                  ("!selected", "#ffffff")])
+            # Treeview
+            style.configure("Treeview",
+                            background="#333333",
+                            foreground="#ffffff",
+                            fieldbackground="#333333",
+                            bordercolor="#444444",
+                            borderwidth=1)
+            style.map("Treeview",
+                      background=[("selected", "#555555")],
+                      foreground=[("selected", "#ffffff")])
+        else:
+            self.root.configure(bg="#f0f0f0")
+            style.configure("TLabel", background="#f0f0f0", foreground="#000000")
+            style.configure("TFrame", background="#f0f0f0")
+            style.configure("TLabelframe", background="#f0f0f0", foreground="#000000")
+            style.configure("TLabelframe.Label", background="#f0f0f0", foreground="#000000")
+
+            style.configure("TButton", background="#e0e0e0", foreground="#000000", padding=6, relief="flat")
+            style.map("TButton", background=[("active", "#c0c0c0")], foreground=[("active", "#000000")])
+
+            style.configure("TCheckbutton", background="#f0f0f0", foreground="#000000")
+
+            style.configure("Treeview", background="#ffffff", foreground="#000000",
+                            fieldbackground="#ffffff", bordercolor="#cccccc", borderwidth=1)
+            style.map("Treeview", background=[("selected", "#c0c0c0")], foreground=[("selected", "#000000")])
 
     def update_conf_label(self, val):
         self.conf_label.config(text=f"{float(val):.2f}")
@@ -210,67 +343,53 @@ class FileZenApp:
         if not directory:
             return
 
-        dry_run = self.dry_run_var.get()
-        logs_or_summary = organize_files(directory, dry_run=dry_run, confidence_threshold=self.conf_val.get())
+        dry_run = self.dry_run_enabled.get()
+        logs, summary = organize_files(directory, dry_run=dry_run, confidence_threshold=self.conf_val.get())
 
         if dry_run:
-            if not logs_or_summary:
-                messagebox.showinfo("Dry Run", "No files to organize.")
-                return
-            self.show_preview(logs_or_summary)
+            if not logs:
+                messagebox.showinfo("Dry Run", "No files to preview.")
+            else:
+                self.show_preview(logs)
         else:
-            moved = logs_or_summary["moved"]
-            review = logs_or_summary["review"]
-            messagebox.showinfo("Organize",
-                                f"Files organized successfully in:\n{directory}\n\n"
-                                f"Summary:\n - {moved} moved\n - {review} sent to Review")
+            messagebox.showinfo(
+                "Organization Complete",
+                f"Files organized successfully!\n\n"
+                f"Moved: {summary.get('moved', 0)}\n"
+                f"Skipped: {summary.get('skipped', 0)}\n"
+                f"Review: {summary.get('review', 0)}"
+            )
+            self.conf_val.set(config["confidence_threshold"])
+            self.dry_run_enabled.set(True)
+            self.apply_theme()
+            self.root.update_idletasks()
 
     def show_preview(self, logs):
         preview = tk.Toplevel(self.root)
         preview.title("Dry Run Preview")
-        preview.geometry("600x400")
+        preview.geometry("700x400")
 
-        cols = ("Filename", "Target", "Confidence")
-        tree = ttk.Treeview(preview, columns=cols, show="headings")
-        for col in cols:
+        columns = ("Filename", "Target", "Confidence")
+        tree = ttk.Treeview(preview, columns=columns, show="headings")
+        for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, anchor="w", width=180 if col != "Confidence" else 100)
-
-        for fname, target, conf in logs:
-            tree.insert("", "end", values=(fname, target, f"{conf:.2f}"))
-
+            tree.column(col, width=220, anchor="w")
         tree.pack(fill="both", expand=True, padx=10, pady=10)
 
-    def apply_theme(self):
-        style = ttk.Style(self.root)
-        if self.dark_theme.get():
-            self.root.configure(bg="#2b2b2b")
-            style.theme_use("clam")
-            style.configure("TLabel", background="#2b2b2b", foreground="white")
-            style.configure("TButton", background="#444", foreground="white")
-            style.map("TButton",
-                      background=[("active", "#666")],
-                      foreground=[("active", "white")])
-            style.configure("TCheckbutton", background="#2b2b2b", foreground="white")
-            style.configure("TLabelFrame", background="#2b2b2b", foreground="white")
+        for row in logs:
+            tree.insert("", "end", values=row)
+
+        summary = ttk.Label(preview,
+                            text=f"Total files: {len(logs)} | Files in REVIEW: {sum(1 for x in logs if config['review_folder_name'] in x[1])}")
+        summary.pack(pady=5)
+
+    def on_preview_toggle(self):
+        if self.dry_run_enabled.get():
+            messagebox.showinfo("Mode", "Dry Run mode enabled — files will not actually move.")
         else:
-            self.root.configure(bg="SystemButtonFace")
-            style.theme_use("clam")
-            style.configure("TLabel", background="SystemButtonFace", foreground="black")
-            style.configure("TButton", background="SystemButtonFace", foreground="black")
-            style.map("TButton",
-                      background=[("active", "#e0e0e0")],
-                      foreground=[("active", "black")])
-            style.configure("TCheckbutton", background="SystemButtonFace", foreground="black")
-            style.configure("TLabelFrame", background="SystemButtonFace", foreground="black")
+            messagebox.showinfo("Mode", "Dry Run mode disabled — files will be organized for real.")
 
-
-# ===== Run GUI =====
-def start_gui():
+if __name__ == "__main__":
     root = tk.Tk()
     app = FileZenApp(root)
     root.mainloop()
-
-
-if __name__ == "__main__":
-    start_gui()
