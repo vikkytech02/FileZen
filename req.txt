@@ -1,5 +1,9 @@
 pandas
 scikit-learn
 joblib
-python-docx       
-PyPDF2        
+python-docx
+PyPDF2
+Pillow
+imagehash
+PyQt5
+PyMuPDF
