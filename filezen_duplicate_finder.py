@@ -1,7 +1,3 @@
-# filezen_duplicate_finder.py
-# Dependencies: PyQt5, Pillow, PyPDF2 (optional), python-docx (optional)
-# pip install PyQt5 Pillow PyPDF2 python-docx
-
 import os
 import io
 import hashlib
